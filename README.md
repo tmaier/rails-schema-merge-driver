@@ -1,5 +1,9 @@
 # rails-schema-merge-driver
 
+[![Gem Version](https://img.shields.io/gem/v/rails-schema-merge-driver.svg)](https://rubygems.org/gems/rails-schema-merge-driver)
+[![CI](https://github.com/tmaier/rails-schema-merge-driver/actions/workflows/main.yml/badge.svg)](https://github.com/tmaier/rails-schema-merge-driver/actions/workflows/main.yml)
+[![Ruby Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://github.com/standardrb/standard)
+
 A git custom merge driver that auto-resolves the most common conflict in Rails
 schema files — the bumped `define(version: N)` line — by keeping the higher
 version. Real content conflicts are left for a human.
