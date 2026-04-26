@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Hard-failure detection for `git merge-file`. A negative return from its
+  `main` is truncated by POSIX to an `exitstatus` greater than 127, so the
+  previous `exitstatus.negative?` guard could never fire — letting a hard
+  failure surface as a clean driver exit and silently drop the other side's
+  changes. Detection now uses `exitstatus > 127` plus `system`'s own nil
+  return for the unspawnable-child case.
+
 ## [0.1.0] - 2026-04-26
 
 ### Added
