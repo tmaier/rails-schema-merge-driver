@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "English"
+require "open3"
 
 # Git custom merge driver for Rails schema files. Delegates to git's built-in
 # three-way merge, then auto-resolves a conflict in the `define(version: N)`
@@ -18,22 +18,45 @@ require "English"
 # See https://git-scm.com/docs/gitattributes#_defining_a_custom_merge_driver
 # Adapted from https://gist.github.com/tpope/643979
 
+# Centralized exit policy. git merge-file uses exit codes 1..127 to mean
+# "N conflicts remaining" and treats them as recoverable, so any driver-crash
+# path must use code >= 2 — `Kernel#abort`'s exit 1 would be misread as
+# "1 conflict remaining" and git would proceed with whatever bytes are on disk.
+def bail!(message, code: 2)
+  warn message
+  exit code
+end
+
 base, current, other, marker_size_arg = ARGV
-abort "usage: git-merge-rails-schema <base> <current> <other> <marker-size>" if [base, current, other].any?(&:nil?)
+bail!("usage: git-merge-rails-schema <base> <current> <other> <marker-size>") if [base, current, other].any?(&:nil?)
 
 marker_size = marker_size_arg.to_i.positive? ? marker_size_arg.to_i : 7
 
 # git merge-file exits 0 for a clean merge, 1..127 for that many remaining
 # conflicts (capped at 127 per the man page), and on a hard error its `main`
 # returns a negative value — which the OS truncates to an `exitstatus` > 127.
-# `system` returns nil if the child couldn't be spawned (e.g. git missing),
-# and a signal-killed process leaves `exitstatus` as nil. Treating any hard
-# failure as "resolved" would silently drop the other side's changes.
-ok = system("git", "merge-file", "--marker-size=#{marker_size}", current, base, other)
-status = $CHILD_STATUS
-abort "git-merge-rails-schema: git merge-file failed (#{status.inspect})" if ok.nil? || status.exitstatus.nil? || status.exitstatus > 127
+# Open3.capture3 (vs. plain `system`) preserves git's stderr so we can re-emit
+# its diagnostics (`error: failed to read`, `warning: Cannot merge binary
+# files`, …) instead of silently dropping them on failure.
+begin
+  _stdout, stderr, status = Open3.capture3("git", "merge-file", "--marker-size=#{marker_size}", current, base, other)
+rescue SystemCallError => e
+  bail!("git-merge-rails-schema: could not spawn git: #{e.message}")
+end
+exit_code = status&.exitstatus
+if exit_code.nil? || exit_code > 127
+  details = stderr.to_s.empty? ? "" : "\n#{stderr.chomp}"
+  bail!("git-merge-rails-schema: git merge-file failed for #{current.inspect} (#{status.inspect})#{details}")
+end
 
-contents = File.read(current)
+begin
+  contents = File.read(current)
+rescue SystemCallError => e
+  # Defends the exit-2 policy: an unhandled exception would exit 1, which git
+  # would misread as "1 conflict remaining". Reachable only on a chmod/unmount
+  # race after git merge-file just wrote the file — vanishingly rare.
+  bail!("git-merge-rails-schema: cannot read #{current.inspect}: #{e.message}")
+end
 
 conflict_pattern = /
   ^<{#{marker_size},}[ \t].*\n
@@ -47,11 +70,24 @@ conflict_pattern = /
   >{#{marker_size},}[ \t].*$
 /x
 
-contents.sub!(conflict_pattern) do
+resolved = contents.sub!(conflict_pattern) do
   m = Regexp.last_match
   (m[:ours_version].delete("_").to_i >= m[:theirs_version].delete("_").to_i) ? m[:ours] : m[:theirs]
 end
 
-File.write(current, contents)
+begin
+  File.write(current, contents)
+rescue SystemCallError => e
+  # Same exit-2 rationale as the read above; the most plausible trigger here
+  # is ENOSPC racing in between git merge-file's write and ours.
+  bail!("git-merge-rails-schema: cannot write #{current.inspect}: #{e.message}")
+end
 
-exit 1 if contents.include?("<" * marker_size)
+if contents.include?("<" * marker_size)
+  if resolved
+    warn "git-merge-rails-schema: kept higher version in #{current.inspect}; other conflicts remain — resolve manually"
+  else
+    warn "git-merge-rails-schema: no version conflict detected in #{current.inspect}; conflicts remain — resolve manually"
+  end
+  exit 1
+end
