@@ -23,12 +23,15 @@ abort "usage: git-merge-rails-schema <base> <current> <other> <marker-size>" if 
 
 marker_size = marker_size_arg.to_i.positive? ? marker_size_arg.to_i : 7
 
-# git merge-file exits 0 for clean, >0 for the number of remaining conflicts,
-# and <0 (or nil if spawn failed) for a hard failure. Treating a hard failure
-# as "conflicts were resolved" would silently drop the other side's changes.
-system("git", "merge-file", "--marker-size=#{marker_size}", current, base, other)
+# git merge-file exits 0 for a clean merge, 1..127 for that many remaining
+# conflicts (capped at 127 per the man page), and on a hard error its `main`
+# returns a negative value — which the OS truncates to an `exitstatus` > 127.
+# `system` returns nil if the child couldn't be spawned (e.g. git missing),
+# and a signal-killed process leaves `exitstatus` as nil. Treating any hard
+# failure as "resolved" would silently drop the other side's changes.
+ok = system("git", "merge-file", "--marker-size=#{marker_size}", current, base, other)
 status = $CHILD_STATUS
-abort "git-merge-rails-schema: git merge-file failed (#{status.inspect})" if status.nil? || status.exitstatus.nil? || status.exitstatus.negative?
+abort "git-merge-rails-schema: git merge-file failed (#{status.inspect})" if ok.nil? || status.exitstatus.nil? || status.exitstatus > 127
 
 contents = File.read(current)
 
