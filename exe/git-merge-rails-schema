@@ -1,0 +1,54 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "English"
+
+# Git custom merge driver for Rails schema files. Delegates to git's built-in
+# three-way merge, then auto-resolves a conflict in the `define(version: N)`
+# line by keeping whichever side has the higher version number.
+#
+# Handles both:
+#   db/schema.rb      => ActiveRecord::Schema[8.1].define(version: 2026_04_22_194416) do
+#   db/data_schema.rb => DataMigrate::Data.define(version: 20_260_417_094_933)
+#                        (only present when the data_migrate gem is in use)
+#
+# Wired up via .gitattributes (`merge=rails-schema`) and registered with
+# `git config merge.rails-schema.driver "git-merge-rails-schema %O %A %B %L"`.
+# Arguments follow git's %O %A %B %L positions.
+# See https://git-scm.com/docs/gitattributes#_defining_a_custom_merge_driver
+# Adapted from https://gist.github.com/tpope/643979
+
+base, current, other, marker_size_arg = ARGV
+abort "usage: git-merge-rails-schema <base> <current> <other> <marker-size>" if [base, current, other].any?(&:nil?)
+
+marker_size = marker_size_arg.to_i.positive? ? marker_size_arg.to_i : 7
+
+# git merge-file exits 0 for clean, >0 for the number of remaining conflicts,
+# and <0 (or nil if spawn failed) for a hard failure. Treating a hard failure
+# as "conflicts were resolved" would silently drop the other side's changes.
+system("git", "merge-file", "--marker-size=#{marker_size}", current, base, other)
+status = $CHILD_STATUS
+abort "git-merge-rails-schema: git merge-file failed (#{status.inspect})" if status.nil? || status.exitstatus.nil? || status.exitstatus.negative?
+
+contents = File.read(current)
+
+conflict_pattern = /
+  ^<{#{marker_size},}[ \t].*\n
+  (?<ours>.*\.define\(version:\s*(?<ours_version>[\d_]+)\).*)\n
+  (?:
+    \|{#{marker_size},}[ \t].*\n              # optional diff3 or zdiff3 base marker
+    (?:(?!={#{marker_size},}\n).*\n)*         # base section content up to the next =======
+  )?
+  ={#{marker_size},}\n
+  (?<theirs>.*\.define\(version:\s*(?<theirs_version>[\d_]+)\).*)\n
+  >{#{marker_size},}[ \t].*$
+/x
+
+contents.sub!(conflict_pattern) do
+  m = Regexp.last_match
+  (m[:ours_version].delete("_").to_i >= m[:theirs_version].delete("_").to_i) ? m[:ours] : m[:theirs]
+end
+
+File.write(current, contents)
+
+exit 1 if contents.include?("<" * marker_size)

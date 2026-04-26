@@ -1,0 +1,3 @@
+module RailsSchemaMergeDriver
+  VERSION: String
+end
