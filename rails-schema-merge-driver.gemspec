@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email = ["tobias.maier@baucloud.com"]
 
   spec.summary = "Git merge driver that auto-resolves Rails schema version conflicts."
-  spec.description = "A custom git merge driver that auto-resolves the most common conflict in Rails schema files (db/schema.rb and, with the data_migrate gem, db/data_schema.rb): the define(version: N) line that gets bumped on every migration. Keeps the higher version on conflict and falls back to a normal merge conflict for any other diverging content. Adapted from tpope's gist (https://gist.github.com/tpope/643979) and extracted from the Librario application (https://www.librario.de)."
+  spec.description = "A custom git merge driver that auto-resolves the most common conflict in Rails schema files (db/schema.rb and, with the data_migrate gem, db/data_schema.rb): the define(version: N) line that gets bumped on every migration. Keeps the higher version on conflict and falls back to a normal merge conflict for any other diverging content."
   spec.homepage = "https://github.com/tmaier/rails-schema-merge-driver"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.4"
