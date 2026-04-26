@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Automated, hardened release process. Pushing a `v*` tag now publishes the
+  gem to RubyGems.org via [trusted publishing][tp] (OIDC, no long-lived API
+  keys) and creates a GitHub Release with the matching CHANGELOG section as
+  notes and the built `.gem` attached as an asset, all from
+  `.github/workflows/release.yml`.
+
 ### Fixed
 
 - Hard-failure detection for `git merge-file`. A negative return from its
@@ -15,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failure surface as a clean driver exit and silently drop the other side's
   changes. Detection now uses `exitstatus > 127` plus `system`'s own nil
   return for the unspawnable-child case.
+
+[tp]: https://guides.rubygems.org/trusted-publishing/
 
 ## [0.1.0] - 2026-04-26
 
