@@ -34,14 +34,14 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     name: Lint (standardrb)
+    permissions:
+      checks: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+      - uses: standardrb/standard-ruby-action@v1
         with:
           ruby-version: "3.4"
-          bundler-cache: true
-      - name: Run standardrb
-        run: bundle exec rake standard
+          autofix: false
