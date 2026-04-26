@@ -20,7 +20,7 @@ jobs:
     continue-on-error: ${{ matrix.ruby == '4.0' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: Set up Ruby
@@ -38,7 +38,7 @@ jobs:
       checks: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: standardrb/standard-ruby-action@v1
