@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-04-26
+
 ### Added
 
 - Automated, hardened release process. Pushing a `v*` tag now publishes the
@@ -65,5 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Aborts on hard `git merge-file` failures (nil/negative exit) so the other
   side's changes are never silently dropped.
 
-[Unreleased]: https://github.com/tmaier/rails-schema-merge-driver/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/tmaier/rails-schema-merge-driver/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/tmaier/rails-schema-merge-driver/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/tmaier/rails-schema-merge-driver/releases/tag/v0.1.0
