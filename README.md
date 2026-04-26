@@ -137,10 +137,13 @@ Releases are published to RubyGems.org via [trusted publishing][tp] (OIDC, no
 API keys) by `.github/workflows/release.yml`, triggered when a `v*` tag is
 pushed. Steps:
 
-1. Bump `RailsSchemaMergeDriver::VERSION` in `lib/rails_schema_merge_driver/version.rb`.
+1. Bump `RailsSchemaMergeDriver::VERSION` in
+   `lib/rails_schema_merge_driver/version.rb`, then run `bundle exec rake test` so `Gemfile.lock` (which path-references the gem itself) picks up
+   the new version.
 2. Move the relevant entries from `[Unreleased]` to a new dated section in
    `CHANGELOG.md`, following the [Keep a Changelog][kac] format.
-3. Commit and push to `main`; wait for CI to pass.
+3. Commit `version.rb`, `Gemfile.lock`, and `CHANGELOG.md`; push to `main`;
+   wait for CI to pass.
 4. Tag and push:
    ```sh
    git tag v0.x.0
