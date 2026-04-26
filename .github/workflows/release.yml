@@ -15,8 +15,11 @@ jobs:
       url: https://rubygems.org/gems/rails-schema-merge-driver
 
     permissions:
-      id-token: write   # required for trusted publishing OIDC
-      contents: write   # required for `rake release` to push the tag back & for `gh release create`
+      id-token: write   # mandatory for RubyGems trusted publishing (OIDC)
+      contents: write   # required for the `gh release create` step below
+                        # (rake release would also need it to push the tag, but
+                        # that step is a no-op here: the tag already exists,
+                        # since the tag push is what triggered this workflow)
 
     steps:
       - uses: actions/checkout@v5
