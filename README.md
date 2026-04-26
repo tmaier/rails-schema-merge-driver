@@ -133,14 +133,30 @@ To install this gem onto your local machine, run `bundle exec rake install`.
 
 ## Releasing
 
-Bump `RailsSchemaMergeDriver::VERSION` in `lib/rails_schema_merge_driver/version.rb`,
-update `CHANGELOG.md`, then:
+Releases are published to RubyGems.org via [trusted publishing][tp] (OIDC, no
+API keys) by `.github/workflows/release.yml`, triggered when a `v*` tag is
+pushed. Steps:
 
-```sh
-bundle exec rake release
-```
+1. Bump `RailsSchemaMergeDriver::VERSION` in `lib/rails_schema_merge_driver/version.rb`.
+2. Move the relevant entries from `[Unreleased]` to a new dated section in
+   `CHANGELOG.md`, following the [Keep a Changelog][kac] format.
+3. Commit and push to `main`; wait for CI to pass.
+4. Tag and push:
+   ```sh
+   git tag v0.x.0
+   git push origin v0.x.0
+   ```
 
-This tags the release, pushes the tag, and publishes the gem to RubyGems.
+The workflow then:
+
+- Authenticates to RubyGems.org via OIDC (no secrets required).
+- Runs `bundle exec rake release` — which builds the gem and pushes it
+  (skips re-tagging because the tag already exists, per `bundler/gem_helper.rb`).
+- Creates a GitHub Release at the tag with the CHANGELOG section as notes and
+  the `.gem` file attached as a downloadable asset.
+
+[tp]: https://guides.rubygems.org/trusted-publishing/
+[kac]: https://keepachangelog.com/en/1.1.0/
 
 ## Acknowledgements
 

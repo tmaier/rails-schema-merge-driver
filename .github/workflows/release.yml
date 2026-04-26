@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  push:
+    name: Push gem to rubygems.org
+    runs-on: ubuntu-latest
+
+    environment:
+      name: release
+      url: https://rubygems.org/gems/rails-schema-merge-driver
+
+    permissions:
+      id-token: write   # required for trusted publishing OIDC
+      contents: write   # required for `rake release` to push the tag back & for `gh release create`
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ruby
+          bundler-cache: true
+
+      - name: Push to RubyGems.org (trusted publishing)
+        uses: rubygems/release-gem@v1
+
+      - name: Create GitHub Release with CHANGELOG notes and .gem asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          notes=$(awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { flag=1; next }
+            /^## \[/ && flag { exit }
+            flag { print }
+          ' CHANGELOG.md)
+          if [ -z "$notes" ]; then
+            notes="Release $TAG"
+          fi
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "$notes" \
+            --verify-tag \
+            pkg/*.gem
